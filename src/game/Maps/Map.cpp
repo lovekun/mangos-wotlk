@@ -158,7 +158,7 @@ Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode)
       m_activeNonPlayersIter(m_activeNonPlayers.end()), m_onEventNotifiedIter(m_onEventNotifiedObjects.end()),
       i_gridExpiry(expiry), m_TerrainData(sTerrainMgr.LoadTerrain(id)),
       i_data(nullptr), i_script_id(0), m_transportsIterator(m_transports.begin()), i_defaultLight(GetDefaultMapLight(id)), m_spawnManager(*this),
-      m_variableManager(this)
+      m_variableManager(this), m_navFlags(0)
 {
     m_weatherSystem = new WeatherSystem(this);
 }

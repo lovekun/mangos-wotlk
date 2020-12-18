@@ -46,6 +46,7 @@ enum NavArea
     NAV_AREA_GROUND_STEEP   = 10, // unused in cmangos - keeping it for structure
     NAV_AREA_WATER          = 9,
     NAV_AREA_MAGMA_SLIME    = 8, // don't need to differentiate between them
+    NAV_AREA_GO_1           = 7,
     NAV_AREA_MAX_VALUE      = NAV_AREA_GROUND,
     NAV_AREA_MIN_VALUE      = NAV_AREA_MAGMA_SLIME,
     NAV_AREA_ALL_MASK       = 0x3F // max allowed value
@@ -57,7 +58,8 @@ enum NavTerrainFlag
     NAV_GROUND       = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_GROUND),
     NAV_GROUND_STEEP = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_GROUND_STEEP),
     NAV_WATER        = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_WATER),
-    NAV_MAGMA_SLIME  = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_MAGMA_SLIME)
+    NAV_MAGMA_SLIME  = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_MAGMA_SLIME),
+    NAV_GO_1         = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_GO_1)
 };
 
 #endif  // _MOVE_MAP_SHARED_DEFINES_H
