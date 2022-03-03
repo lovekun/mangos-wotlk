@@ -964,7 +964,9 @@ struct ColiseumFloor : public GameObjectAI
         if (state == GO_STATE_ACTIVE)
         {
             m_go->GetMap()->SetNavTile(30, 31, 0);
-            m_go->GetMap()->SetNavTile(30, 31, 0);
+            m_go->GetMap()->SetNavTile(30, 30, 0);
+            m_go->GetMap()->SetNavTile(31, 31, 0);
+            m_go->GetMap()->SetNavTile(31, 30, 0);
         }
     }
 };

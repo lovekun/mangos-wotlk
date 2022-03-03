@@ -154,7 +154,11 @@ void Map::LoadMapAndVMap(int gx, int gy)
         return;
 
     if (m_TerrainData->Load(gx, gy))
+    {
         m_bLoadedGrids[gx][gy] = true;
+        if (!MMAP::MMapFactory::createOrGetMMapManager()->IsMMapTileLoaded(GetId(), GetInstanceId(), gx, gy))
+            MMAP::MMapFactory::createOrGetMMapManager()->loadMap(GetId(), GetInstanceId(), gx, gy, 0);
+    }
 }
 
 Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode)
@@ -164,7 +168,7 @@ Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode)
       m_activeNonPlayersIter(m_activeNonPlayers.end()), m_onEventNotifiedIter(m_onEventNotifiedObjects.end()),
       i_gridExpiry(expiry), m_TerrainData(sTerrainMgr.LoadTerrain(id)),
       i_data(nullptr), i_script_id(0), m_transportsIterator(m_transports.begin()), i_defaultLight(GetDefaultMapLight(id)), m_spawnManager(*this),
-      m_variableManager(this), m_navFlags(0)
+      m_variableManager(this)
 {
     m_weatherSystem = new WeatherSystem(this);
 }
@@ -205,6 +209,9 @@ void Map::Initialize(bool loadInstanceData /*= true*/)
     m_variableManager.Initialize();
 
     m_spawnManager.Initialize();
+
+    // load navmesh
+    MMAP::MMapFactory::createOrGetMMapManager()->loadMapData(GetId(), GetInstanceId());
 }
 
 void Map::InitVisibilityDistance()

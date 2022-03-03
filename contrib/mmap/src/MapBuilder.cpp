@@ -859,8 +859,8 @@ namespace MMAP
                                       dtNavMesh* navMesh)
     {
         // console output
-        char tileString[20];
-        sprintf(tileString, "[Map %03i] [%02i,%02i]%s: ", mapID, tileX, tileY, tileNumber > 0 ? " [%02i]" : "");
+        char tileString[25];
+        sprintf(tileString, "[Map %03i] [%02i,%02i] [%02i]", mapID, tileX, tileY, tileNumber);
         printf("%s Building movemap tiles...                          \r", tileString);
 
         IntermediateValues iv(m_workdir);
@@ -1077,7 +1077,10 @@ namespace MMAP
 
             // file output
             char fileName[1024];
-            sprintf(fileName, "%s/mmaps/%03u%02i%02i%s.mmtile", m_workdir, mapID, tileY, tileX, tileNumber > 0 ? "_%02i" : "");
+            if (tileNumber == 0)
+                sprintf(fileName, "%s/mmaps/%03u%02i%02i.mmtile", m_workdir, mapID, tileY, tileX);
+            else
+                sprintf(fileName, "%s/mmaps/%03u%02i%02i_%02i.mmtile", m_workdir, mapID, tileY, tileX, tileNumber);
             FILE* file = fopen(fileName, "wb");
             if (!file)
             {
