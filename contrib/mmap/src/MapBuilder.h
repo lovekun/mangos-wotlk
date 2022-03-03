@@ -121,7 +121,7 @@ namespace MMAP
                                  int* lTris, int lTriCount, uint8* lTriFlags);
 
             // move map building
-            void buildMoveMapTile(uint32 mapID, uint32 tileX, uint32 tileY, MeshData& meshData, float bmin[3], float bmax[3], dtNavMesh* navMesh);
+            void buildMoveMapTile(uint32 mapID, uint32 tileX, uint32 tileY, uint32 tileNumber, MeshData& meshData, float bmin[3], float bmax[3], dtNavMesh* navMesh);
             void getTileBounds(uint32 tileX, uint32 tileY, float* verts, int vertCount, float* bmin, float* bmax);
             void getGridBounds(uint32 mapID, uint32& minX, uint32& minY, uint32& maxX, uint32& maxY);
 

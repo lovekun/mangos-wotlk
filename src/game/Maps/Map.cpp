@@ -142,6 +142,12 @@ bool Map::CanSpawn(TypeID typeId, uint32 dbGuid)
     return false;
 }
 
+void Map::SetNavTile(uint32 tileX, uint32 tileY, uint32 tileNumber)
+{
+    MMAP::MMapManager* mmap = MMAP::MMapFactory::createOrGetMMapManager();
+    mmap->ChangeTile(GetId(), GetInstanceId(), tileX, tileY, tileNumber);
+}
+
 void Map::LoadMapAndVMap(int gx, int gy)
 {
     if (m_bLoadedGrids[gx][gy])

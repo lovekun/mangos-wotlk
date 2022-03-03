@@ -674,6 +674,27 @@ namespace MMAP
         meshData.solidType.resize(meshData.solidTris.size() / 3);
         std::fill(meshData.solidType.begin(), meshData.solidType.end(), NAV_GROUND);
 
+        // remove unused vertices
+        TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
+        TerrainBuilder::cleanVertices(meshData.liquidVerts, meshData.liquidTris);
+
+        // gather all mesh data for final data check, and bounds calculation
+        G3D::Array<float> allVerts;
+        allVerts.append(meshData.liquidVerts);
+        allVerts.append(meshData.solidVerts);
+
+        if (!allVerts.size())
+            return;
+
+        // get bounds of current tile
+        float bmin[3], bmax[3];
+        getTileBounds(tileX, tileY, allVerts.getCArray(), allVerts.size() / 3, bmin, bmax);
+
+        m_terrainBuilder->loadOffMeshConnections(mapID, tileX, tileY, meshData, m_offMeshFilePath);
+
+        // build navmesh tile
+        buildMoveMapTile(mapID, tileX, tileY, 0, meshData, bmin, bmax, navMesh);
+
         if (mapID == 649 && (tileX == 30 || tileX == 31) && (tileY == 30 || tileY == 31)) // Trial of the Crusader
         {
             WorldModel m;
@@ -684,7 +705,7 @@ namespace MMAP
             }
 
             // Load model data into navmesh
-            vector<GroupModel> groupModels;
+            std::vector<GroupModel> groupModels;
             m.getGroupModels(groupModels);
 
             // all M2s need to have triangle indices reversed
@@ -718,7 +739,7 @@ namespace MMAP
 
                 G3D::Array<uint8> tempTypes;
                 tempTypes.resize(tempTriangles.size());
-                std::fill(tempTypes.begin(), tempTypes.end(), NAV_GO_1);
+                std::fill(tempTypes.begin(), tempTypes.end(), NAV_AREA_GROUND);
 
                 TerrainBuilder::copyVertices(tempVertices, meshData.solidVerts);
                 TerrainBuilder::copyIndices(tempTriangles, meshData.solidTris, offset, isM2);
@@ -734,28 +755,25 @@ namespace MMAP
                 //TerrainBuilder::copyIndices(tempTriangles, meshData.liquidTris, offset, isM2);
                 //meshData.liquidType.append(tempTypes);
             }
+
+            // remove unused vertices
+            TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
+            TerrainBuilder::cleanVertices(meshData.liquidVerts, meshData.liquidTris);
+
+            // gather all mesh data for final data check, and bounds calculation
+            G3D::Array<float> allVerts;
+            allVerts.append(meshData.liquidVerts);
+            allVerts.append(meshData.solidVerts);
+
+            if (!allVerts.size())
+                return;
+
+            // get bounds of current tile
+            float bmin[3], bmax[3];
+            getTileBounds(tileX, tileY, allVerts.getCArray(), allVerts.size() / 3, bmin, bmax);
+
+            buildMoveMapTile(mapID, tileX, tileY, 1, meshData, bmin, bmax, navMesh);
         }
-
-        // remove unused vertices
-        TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
-        TerrainBuilder::cleanVertices(meshData.liquidVerts, meshData.liquidTris);
-
-        // gather all mesh data for final data check, and bounds calculation
-        G3D::Array<float> allVerts;
-        allVerts.append(meshData.liquidVerts);
-        allVerts.append(meshData.solidVerts);
-
-        if (!allVerts.size())
-            return;
-
-        // get bounds of current tile
-        float bmin[3], bmax[3];
-        getTileBounds(tileX, tileY, allVerts.getCArray(), allVerts.size() / 3, bmin, bmax);
-
-        m_terrainBuilder->loadOffMeshConnections(mapID, tileX, tileY, meshData, m_offMeshFilePath);
-
-        // build navmesh tile
-        buildMoveMapTile(mapID, tileX, tileY, meshData, bmin, bmax, navMesh);
     }
 
     /**************************************************************************/
@@ -836,13 +854,13 @@ namespace MMAP
     }
 
     /**************************************************************************/
-    void MapBuilder::buildMoveMapTile(uint32 mapID, uint32 tileX, uint32 tileY,
+    void MapBuilder::buildMoveMapTile(uint32 mapID, uint32 tileX, uint32 tileY, uint32 tileNumber,
                                       MeshData& meshData, float bmin[3], float bmax[3],
                                       dtNavMesh* navMesh)
     {
         // console output
         char tileString[20];
-        sprintf(tileString, "[Map %03i] [%02i,%02i]: ", mapID, tileX, tileY);
+        sprintf(tileString, "[Map %03i] [%02i,%02i]%s: ", mapID, tileX, tileY, tileNumber > 0 ? " [%02i]" : "");
         printf("%s Building movemap tiles...                          \r", tileString);
 
         IntermediateValues iv(m_workdir);
@@ -1059,7 +1077,7 @@ namespace MMAP
 
             // file output
             char fileName[1024];
-            sprintf(fileName, "%s/mmaps/%03u%02i%02i.mmtile", m_workdir, mapID, tileY, tileX);
+            sprintf(fileName, "%s/mmaps/%03u%02i%02i%s.mmtile", m_workdir, mapID, tileY, tileX, tileNumber > 0 ? "_%02i" : "");
             FILE* file = fopen(fileName, "wb");
             if (!file)
             {
