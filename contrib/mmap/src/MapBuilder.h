@@ -31,6 +31,8 @@
 #include "IVMapManager.h"
 #include "WorldModel.h"
 
+#include "Vmap/GameObjectModelVmaps.h"
+
 #include "Recast.h"
 #include "DetourNavMesh.h"
 
@@ -154,6 +156,8 @@ namespace MMAP
 
             // used to know wich map have launched all its tile work
             MapSet m_mapDone;
+
+            ModelList m_modelList;
     };
 
     // Task queue : not thread safe (do not add worker asynchronously)

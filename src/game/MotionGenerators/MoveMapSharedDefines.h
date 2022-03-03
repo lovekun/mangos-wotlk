@@ -63,29 +63,20 @@ enum NavTerrainFlag
     NAV_GO_1         = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_GO_1)
 };
 
-struct TileCoords
-{
-    uint32 tileX;
-    uint32 tileY;
-    TileCoords(uint32 tileX, uint32 tileY) : tileX(tileX), tileY(tileY) {}
-};
-
 struct TileBuilding
 {
     std::string modelName;
-    double x, y, z;
-    std::vector<TileCoords> coords;
+    double x, y, z, ori;
+    uint32 displayId;
 
-    TileBuilding(std::string modelName, double x, double y, double z, std::vector<TileCoords> coords) :
-        modelName(modelName), x(x), y(y), z(z), coords(coords) {}
+    TileBuilding(std::string modelName, double x, double y, double z, double ori, uint32 displayId) :
+        modelName(modelName), x(x), y(y), z(z), ori(ori), displayId(displayId) {}
 };
 
 typedef std::map<uint32, std::vector<TileBuilding>> TileBuildings;
 static TileBuildings BuildingMap =
 {
-    {649u, {TileBuilding(std::string("Coliseum_Intact_Floor.wmo.vmo"), 563.53472900390625, 177.3090362548828125, 398.5718994140625,
-        {TileCoords(30u, 30u), TileCoords(30u, 31u), TileCoords(31u, 30u), TileCoords(31u, 31u)}
-    )}}
+    {649u, {TileBuilding(std::string("Coliseum_Intact_Floor.wmo.vmo"), 563.53472900390625, 177.3090362548828125, 398.5718994140625, 3.14159265358979323846 / 2, 9059)}}
 };
 
 #endif  // _MOVE_MAP_SHARED_DEFINES_H

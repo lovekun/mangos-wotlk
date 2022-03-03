@@ -35,7 +35,6 @@ IF(APPLE)
    SET(EXTRA_LIBS ${CORE_SERVICES})
 ENDIF (APPLE)
 
-# TODO: Do we still need that vmaplib?
 add_library(vmaplib STATIC
     ../../src/game/Vmap/BIH.cpp
     ../../src/game/Vmap/VMapManager2.cpp
@@ -43,6 +42,7 @@ add_library(vmaplib STATIC
     ../../src/game/Vmap/TileAssembler.cpp
     ../../src/game/Vmap/WorldModel.cpp
     ../../src/game/Vmap/ModelInstance.cpp
+    ../../src/game/Vmap/GameObjectModelVmaps.cpp
 )
 
 target_link_libraries(vmaplib

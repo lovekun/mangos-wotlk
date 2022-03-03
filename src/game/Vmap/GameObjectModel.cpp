@@ -26,47 +26,9 @@
 #include "Vmap/GameObjectModel.h"
 #include "Server/DBCStores.h"
 #include "ModelInstance.h"
+#include "Vmap/GameObjectModelVmaps.h"
 
-struct GameobjectModelData
-{
-    GameobjectModelData(const std::string& name_, const G3D::AABox& box) :
-        name(name_), bound(box) {}
-
-    std::string name;
-    G3D::AABox bound;
-};
-
-typedef std::unordered_map<uint32, GameobjectModelData> ModelList;
 ModelList model_list;
-
-void LoadGameObjectModelList()
-{
-    FILE* model_list_file = fopen((sWorld.GetDataPath() + "vmaps/" + VMAP::GAMEOBJECT_MODELS).c_str(), "rb");
-    if (!model_list_file)
-        return;
-
-    uint32 name_length, displayId;
-    char buff[500];
-    while (!feof(model_list_file))
-    {
-        fread(&displayId, sizeof(uint32), 1, model_list_file);
-        fread(&name_length, sizeof(uint32), 1, model_list_file);
-
-        if (name_length >= sizeof(buff))
-        {
-            sLog.outDebug("File %s seems to be corrupted", VMAP::GAMEOBJECT_MODELS);
-            break;
-        }
-
-        fread(&buff, sizeof(char), name_length, model_list_file);
-        Vector3 v1, v2;
-        fread(&v1, sizeof(Vector3), 1, model_list_file);
-        fread(&v2, sizeof(Vector3), 1, model_list_file);
-
-        model_list.insert(ModelList::value_type(displayId, GameobjectModelData(std::string(buff, name_length), AABox(v1, v2))));
-    }
-    fclose(model_list_file);
-}
 
 GameObjectModel::~GameObjectModel()
 {
@@ -205,4 +167,9 @@ bool GameObjectModel::Relocate(GameObject const& go)
     }
 #endif
     return true;
+}
+
+void GameObjectModel::LoadGOVmapModels()
+{
+    model_list = LoadGameObjectModelList(sWorld.GetDataPath() + "vmaps/" + VMAP::GAMEOBJECT_MODELS);
 }

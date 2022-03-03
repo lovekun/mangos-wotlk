@@ -611,9 +611,6 @@ namespace MMAP
                 position.x -= 32 * GRID_SIZE;
                 position.y -= 32 * GRID_SIZE;
 
-                if (tileX == 30 && tileY == 30)
-                    printf("%f %f %f\n", position.x, position.y, position.z);
-
                 for (vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
                 {
                     vector<Vector3> tempVertices;

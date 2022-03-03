@@ -65,5 +65,7 @@ class GameObjectModel
         static GameObjectModel* construct(const GameObject* const pGo);
 
         bool Relocate(GameObject const& go);
+
+        static void LoadGOVmapModels();
 };
 #endif

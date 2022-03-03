@@ -93,6 +93,8 @@ namespace MMAP
 
         printf("Using %d thread(s) for processing.\n", threads);
         discoverTiles();
+
+        m_modelList = LoadGameObjectModelList(std::string(m_workdir) + "/vmaps/" + VMAP::GAMEOBJECT_MODELS);
     }
 
     /**************************************************************************/
@@ -695,24 +697,39 @@ namespace MMAP
         // build navmesh tile
         buildMoveMapTile(mapID, tileX, tileY, 0, meshData, bmin, bmax, navMesh);
 
+        std::vector<TileBuilding const*> eligibleBuildings;
+
         auto itr = BuildingMap.find(mapID);
         if (itr != BuildingMap.end()) // building GO
         {
-            TileBuilding const* building = nullptr;
             for (TileBuilding& data : itr->second)
             {
-                for (TileCoords& coords : data.coords)
-                {
-                    if (coords.tileX == tileX && coords.tileY == tileY)
-                    {
-                        building = &data;
-                    }
-                }
+                G3D::Matrix3 iRotation = G3D::Matrix3::fromEulerAnglesZYX(data.ori, 0, 0);
+                Vector3 pos(data.x, data.y, data.z);
+                ModelList::const_iterator itr = m_modelList.find(data.displayId);
+                if (itr == m_modelList.end())
+                    continue;
+                AABox mdl_box = itr->second.bound;
+                // transform bounding box:
+                mdl_box = AABox(mdl_box.low() * 1, mdl_box.high() * 1);
+                AABox rotated_bounds;
+                for (uint32 i = 0; i < 8; ++i)
+                    rotated_bounds.merge(iRotation * mdl_box.corner(i));
+
+                AABox bounds = rotated_bounds + pos;
+
+                uint32 lowX = 32 - bounds.high().y / GRID_SIZE;
+                uint32 lowY = 32 - bounds.high().x / GRID_SIZE;
+                uint32 highX = 32 - bounds.low().y / GRID_SIZE;
+                uint32 highY = 32 - bounds.low().x / GRID_SIZE;
+
+                if (lowX <= tileX && lowY <= tileY && highX >= tileX && highY >= tileY)
+                    eligibleBuildings.push_back(&data);
             }
+        }
 
-            if (!building)
-                return;
-
+        for (TileBuilding const* building : eligibleBuildings)
+        {
             WorldModel m;
             if (!m.readFile("vmaps/" + building->modelName))
             {
@@ -729,9 +746,8 @@ namespace MMAP
             bool isM2 = false;
 
             G3D::Vector3 pos(building->x, building->y, building->z);
-            G3D::Quat rot(0, 0, sin(G3D::pi() / 4), cos(G3D::pi() / 4));
+            G3D::Quat rot(0, 0, sin(building->ori / 2), cos(building->ori / 2));
             G3D::Matrix3 matrix = rot.toRotationMatrix();
-            printf("bla");
             for (vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
             {
                 // transform data
@@ -747,9 +763,6 @@ namespace MMAP
                     vertex.y = -vertex.y;
                     vertex = (vertex * matrix) + pos;
                 }
-
-                for (auto data : tempVertices)
-                    printf("%f %f %f\n", data.x, data.y, data.z);
 
                 int offset = meshData.solidVerts.size() / 3;
 
