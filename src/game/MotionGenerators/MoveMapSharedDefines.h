@@ -21,6 +21,7 @@
 
 #include "Platform/Define.h"
 #include <Detour/Include/DetourNavMesh.h>
+#include <map>
 
 #define MMAP_MAGIC 0x4d4d4150   // 'MMAP'
 #define MMAP_VERSION 7
@@ -60,6 +61,31 @@ enum NavTerrainFlag
     NAV_WATER        = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_WATER),
     NAV_MAGMA_SLIME  = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_MAGMA_SLIME),
     NAV_GO_1         = 1 << (NAV_AREA_MAX_VALUE - NAV_AREA_GO_1)
+};
+
+struct TileCoords
+{
+    uint32 tileX;
+    uint32 tileY;
+    TileCoords(uint32 tileX, uint32 tileY) : tileX(tileX), tileY(tileY) {}
+};
+
+struct TileBuilding
+{
+    std::string modelName;
+    double x, y, z;
+    std::vector<TileCoords> coords;
+
+    TileBuilding(std::string modelName, double x, double y, double z, std::vector<TileCoords> coords) :
+        modelName(modelName), x(x), y(y), z(z), coords(coords) {}
+};
+
+typedef std::map<uint32, std::vector<TileBuilding>> TileBuildings;
+static TileBuildings BuildingMap =
+{
+    {649u, {TileBuilding(std::string("Coliseum_Intact_Floor.wmo.vmo"), 563.53472900390625, 177.3090362548828125, 398.5718994140625,
+        {TileCoords(30u, 30u), TileCoords(30u, 31u), TileCoords(31u, 30u), TileCoords(31u, 31u)}
+    )}}
 };
 
 #endif  // _MOVE_MAP_SHARED_DEFINES_H

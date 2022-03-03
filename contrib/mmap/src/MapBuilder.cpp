@@ -695,10 +695,26 @@ namespace MMAP
         // build navmesh tile
         buildMoveMapTile(mapID, tileX, tileY, 0, meshData, bmin, bmax, navMesh);
 
-        if (mapID == 649 && (tileX == 30 || tileX == 31) && (tileY == 30 || tileY == 31)) // Trial of the Crusader
+        auto itr = BuildingMap.find(mapID);
+        if (itr != BuildingMap.end()) // building GO
         {
+            TileBuilding const* building = nullptr;
+            for (TileBuilding& data : itr->second)
+            {
+                for (TileCoords& coords : data.coords)
+                {
+                    if (coords.tileX == tileX && coords.tileY == tileY)
+                    {
+                        building = &data;
+                    }
+                }
+            }
+
+            if (!building)
+                return;
+
             WorldModel m;
-            if (!m.readFile("vmaps/Coliseum_Intact_Floor.wmo.vmo"))
+            if (!m.readFile("vmaps/" + building->modelName))
             {
                 printf("* Unable to open file\n");
                 return;
@@ -712,7 +728,7 @@ namespace MMAP
             // bool isM2 = modelName.find(".m2") != modelName.npos || modelName.find(".M2") != modelName.npos;
             bool isM2 = false;
 
-            G3D::Vector3 pos(563.53472900390625, 177.3090362548828125, 398.5718994140625);
+            G3D::Vector3 pos(building->x, building->y, building->z);
             G3D::Quat rot(0, 0, sin(G3D::pi() / 4), cos(G3D::pi() / 4));
             G3D::Matrix3 matrix = rot.toRotationMatrix();
             printf("bla");
