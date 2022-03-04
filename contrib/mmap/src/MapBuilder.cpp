@@ -676,32 +676,18 @@ namespace MMAP
         meshData.solidType.resize(meshData.solidTris.size() / 3);
         std::fill(meshData.solidType.begin(), meshData.solidType.end(), NAV_GROUND);
 
-        // remove unused vertices
-        TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
-        TerrainBuilder::cleanVertices(meshData.liquidVerts, meshData.liquidTris);
-
-        // gather all mesh data for final data check, and bounds calculation
-        G3D::Array<float> allVerts;
-        allVerts.append(meshData.liquidVerts);
-        allVerts.append(meshData.solidVerts);
-
-        if (!allVerts.size())
-            return;
-
-        // get bounds of current tile
-        float bmin[3], bmax[3];
-        getTileBounds(tileX, tileY, allVerts.getCArray(), allVerts.size() / 3, bmin, bmax);
-
         m_terrainBuilder->loadOffMeshConnections(mapID, tileX, tileY, meshData, m_offMeshFilePath);
 
-        // build navmesh tile
-        buildMoveMapTile(mapID, tileX, tileY, 0, meshData, bmin, bmax, navMesh);
-
-        std::vector<TileBuilding const*> eligibleBuildings;
+        std::vector<TileBuilding const*> buildingsByDefault;
+        std::map<uint32, std::vector<TileBuilding const*>> buildingsInTile;
+        std::map<uint32, std::vector<TileBuilding const*>> buildingsByGroup;
+        std::map<uint32, uint32> entryToGroup;
+        std::map<uint32, uint32> flagToGroup;
 
         auto itr = BuildingMap.find(mapID);
         if (itr != BuildingMap.end()) // building GO
         {
+            uint32 i = 0;
             for (TileBuilding& data : itr->second)
             {
                 G3D::Matrix3 iRotation = G3D::Matrix3::fromEulerAnglesZYX(data.ori, 0, 0);
@@ -724,85 +710,135 @@ namespace MMAP
                 uint32 highY = 32 - bounds.low().x / GRID_SIZE;
 
                 if (lowX <= tileX && lowY <= tileY && highX >= tileX && highY >= tileY)
-                    eligibleBuildings.push_back(&data);
-            }
-        }
-
-        for (TileBuilding const* building : eligibleBuildings)
-        {
-            WorldModel m;
-            if (!m.readFile("vmaps/" + building->modelName))
-            {
-                printf("* Unable to open file\n");
-                return;
-            }
-
-            // Load model data into navmesh
-            std::vector<GroupModel> groupModels;
-            m.getGroupModels(groupModels);
-
-            // all M2s need to have triangle indices reversed
-            // bool isM2 = modelName.find(".m2") != modelName.npos || modelName.find(".M2") != modelName.npos;
-            bool isM2 = false;
-
-            G3D::Vector3 pos(building->x, building->y, building->z);
-            G3D::Quat rot(0, 0, sin(building->ori / 2), cos(building->ori / 2));
-            G3D::Matrix3 matrix = rot.toRotationMatrix();
-            for (vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
-            {
-                // transform data
-                vector<Vector3> tempVertices;
-                vector<MeshTriangle> tempTriangles;
-                WmoLiquid* liquid = nullptr;
-
-                (*it).getMeshData(tempVertices, tempTriangles, liquid);
-
-                for (auto& vertex : tempVertices)
                 {
-                    vertex.x = -vertex.x;
-                    vertex.y = -vertex.y;
-                    vertex = (vertex * matrix) + pos;
+                    if (data.byDefault)
+                        buildingsByDefault.push_back(&data);
+                    else if (!data.tileFlags)
+                        buildingsInTile[data.tileNumber].push_back(&data);
+                    else
+                    {
+                        uint32 chosenGroup = 0;
+                        auto itrEntry = entryToGroup.find(data.goEntry);
+                        auto itrFlags = flagToGroup.find(data.tileFlags);
+                        if (itrEntry != entryToGroup.end())
+                            chosenGroup = itrEntry->second;
+                        else if (data.tileFlags > 0 && itrFlags != flagToGroup.end())
+                            chosenGroup = itrFlags->second;
+                        else
+                        {
+                            chosenGroup = i;
+                            ++i;
+                        }
+
+                        buildingsByGroup[chosenGroup].push_back(&data);
+                        entryToGroup[data.goEntry] = chosenGroup;
+                        if (data.tileFlags)
+                            flagToGroup[data.tileFlags] = chosenGroup;
+                    }
                 }
+            }
+        }
 
-                int offset = meshData.solidVerts.size() / 3;
+        // some buildings are by default like icc platform
+        for (TileBuilding const* building : buildingsByDefault)
+            AddBuildingToTile(building, meshData);
 
-                G3D::Array<uint8> tempTypes;
-                tempTypes.resize(tempTriangles.size());
-                std::fill(tempTypes.begin(), tempTypes.end(), NAV_AREA_GROUND);
+        // build navmesh tile 0
+        PrepareAndBuildTile(meshData, mapID, tileX, tileY, 0, navMesh);
 
-                TerrainBuilder::copyVertices(tempVertices, meshData.solidVerts);
-                TerrainBuilder::copyIndices(tempTriangles, meshData.solidTris, offset, isM2);
-                meshData.solidType.append(tempTypes);
+        if (buildingsInTile.size()) // predefined tile ids
+        {
+            for (auto& data : buildingsInTile)
+            {
+                MeshData copyMeshData = meshData;
+                uint32 tileId = data.first;
+                for (TileBuilding const* building : data.second)
+                    AddBuildingToTile(building, copyMeshData);
 
-                //int offset = meshData.liquidVerts.size() / 3;
+                PrepareAndBuildTile(copyMeshData, mapID, tileX, tileY, tileId, navMesh);
+            }
+        }
+        else
+        {
+            // TODO: Flag tiles permutations
+            for (auto& dataUpper : buildingsByGroup)
+            {
+                for (auto& dataLower : buildingsByGroup)
+                {
+                    if (dataUpper.first == dataLower.first)
+                        continue;
+                }
+            }
+        }
+    }
 
-                //G3D::Array<uint8> tempTypes;
-                //tempTypes.resize(tempVertices.size() / 3);
-                //std::fill(tempTypes.begin(), tempTypes.end(), NAV_GO_1);
+    void MapBuilder::AddBuildingToTile(TileBuilding const* building, MeshData& meshData)
+    {
+        WorldModel m;
+        if (!m.readFile("vmaps/" + building->modelName))
+        {
+            printf("* Unable to open file\n");
+            return;
+        }
 
-                //TerrainBuilder::copyVertices(tempVertices, meshData.liquidVerts);
-                //TerrainBuilder::copyIndices(tempTriangles, meshData.liquidTris, offset, isM2);
-                //meshData.liquidType.append(tempTypes);
+        // Load model data into navmesh
+        std::vector<GroupModel> groupModels;
+        m.getGroupModels(groupModels);
+
+        // all M2s need to have triangle indices reversed
+        // bool isM2 = modelName.find(".m2") != modelName.npos || modelName.find(".M2") != modelName.npos;
+        bool isM2 = false;
+
+        G3D::Vector3 pos(building->x, building->y, building->z);
+        G3D::Quat rot(0, 0, sin(building->ori / 2), cos(building->ori / 2));
+        G3D::Matrix3 matrix = rot.toRotationMatrix();
+        for (vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
+        {
+            // transform data
+            vector<Vector3> tempVertices;
+            vector<MeshTriangle> tempTriangles;
+            WmoLiquid* liquid = nullptr;
+
+            (*it).getMeshData(tempVertices, tempTriangles, liquid);
+
+            for (auto& vertex : tempVertices)
+            {
+                vertex.x = -vertex.x;
+                vertex.y = -vertex.y;
+                vertex = (vertex * matrix) + pos;
             }
 
-            // remove unused vertices
-            TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
-            TerrainBuilder::cleanVertices(meshData.liquidVerts, meshData.liquidTris);
+            int offset = meshData.solidVerts.size() / 3;
 
-            // gather all mesh data for final data check, and bounds calculation
-            G3D::Array<float> allVerts;
-            allVerts.append(meshData.liquidVerts);
-            allVerts.append(meshData.solidVerts);
+            G3D::Array<uint8> tempTypes;
+            tempTypes.resize(tempTriangles.size());
+            std::fill(tempTypes.begin(), tempTypes.end(), NAV_AREA_GROUND);
 
-            if (!allVerts.size())
-                return;
-
-            // get bounds of current tile
-            float bmin[3], bmax[3];
-            getTileBounds(tileX, tileY, allVerts.getCArray(), allVerts.size() / 3, bmin, bmax);
-
-            buildMoveMapTile(mapID, tileX, tileY, 1, meshData, bmin, bmax, navMesh);
+            TerrainBuilder::copyVertices(tempVertices, meshData.solidVerts);
+            TerrainBuilder::copyIndices(tempTriangles, meshData.solidTris, offset, isM2);
+            meshData.solidType.append(tempTypes);
         }
+    }
+
+    void MapBuilder::PrepareAndBuildTile(MeshData& meshData, uint32 mapID, uint32 tileX, uint32 tileY, uint32 tileId, dtNavMesh* navMesh)
+    {
+        // remove unused vertices
+        TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
+        TerrainBuilder::cleanVertices(meshData.liquidVerts, meshData.liquidTris);
+
+        // gather all mesh data for final data check, and bounds calculation
+        G3D::Array<float> allVerts;
+        allVerts.append(meshData.liquidVerts);
+        allVerts.append(meshData.solidVerts);
+
+        if (!allVerts.size())
+            return;
+
+        // get bounds of current tile
+        float bmin[3], bmax[3];
+        getTileBounds(tileX, tileY, allVerts.getCArray(), allVerts.size() / 3, bmin, bmax);
+
+        buildMoveMapTile(mapID, tileX, tileY, tileId, meshData, bmin, bmax, navMesh);
     }
 
     /**************************************************************************/
