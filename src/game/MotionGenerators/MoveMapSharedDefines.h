@@ -67,16 +67,23 @@ struct TileBuilding
 {
     std::string modelName;
     double x, y, z, ori;
+    double qx, qy, qz, qw;
     uint32 displayId;
+    bool tileFlags;
+    uint32 tileNumber;
 
-    TileBuilding(std::string modelName, double x, double y, double z, double ori, uint32 displayId) :
-        modelName(modelName), x(x), y(y), z(z), ori(ori), displayId(displayId) {}
+    TileBuilding(std::string modelName, double x, double y, double z, double ori, double qx, double qy, double qz, double qw, uint32 displayId, bool tileFlags, uint32 tileNumber) :
+        modelName(modelName), x(x), y(y), z(z), ori(ori), qx(qx), qy(qy), qz(qz), qw(qw), displayId(displayId), tileFlags(tileFlags), tileNumber(tileNumber) {}
 };
 
 typedef std::map<uint32, std::vector<TileBuilding>> TileBuildings;
 static TileBuildings BuildingMap =
 {
-    {649u, {TileBuilding(std::string("Coliseum_Intact_Floor.wmo.vmo"), 563.53472900390625, 177.3090362548828125, 398.5718994140625, 3.14159265358979323846 / 2, 9059)}}
+    {649u, {TileBuilding(std::string("Coliseum_Intact_Floor.wmo.vmo"), 563.53472900390625, 177.3090362548828125, 398.5718994140625, 3.14159265358979323846 / 2, 0, 0, 0, 0, 9059, false, 01)}},
+    {603u, {TileBuilding(std::string("Ul_Ulduar_Trapdoor_02.m2.vmo"), 1805.630126953125, -23.5202598571777343, 451.225433349609375, 0, 0, 0, 0, 0, 8546, false, 01)}},
+    {616u, {TileBuilding(std::string("Nexus_Raid_Floating_Platform.wmo.vmo"), 754.34552001953125, 1300.8697509765625, 256.24853515625, 3.141592741012573242, 0, 0, 0, 0, 8387, false, 01)}},
+    {631u, {TileBuilding(std::string("Icecrownraid_Arthas_Precipice.wmo.vmo"), 503.619781494140625, -2124.654541015625, 836.60699462890625, 3.141592741012573242, 0, 0, 0, 0, 9256, false, 01)}},
+    {631u, {TileBuilding(std::string("Icecrownraid_Arthas_Precipice_Phase0.wmo.vmo"), 503.619781494140625, -2124.654541015625, 836.60699462890625, 3.141592741012573242, 0, 0, 0, 0, 9276, false, 01)}},
 };
 
 #endif  // _MOVE_MAP_SHARED_DEFINES_H
