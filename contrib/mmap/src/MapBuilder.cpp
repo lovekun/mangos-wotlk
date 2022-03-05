@@ -656,6 +656,15 @@ namespace MMAP
         dtFreeNavMesh(navMesh);
     }
 
+    const std::array<uint32, 5> factorial =
+    {
+        1,
+        1,
+        2,
+        6,
+        24
+    };
+
     /**************************************************************************/
     void MapBuilder::buildTile(uint32 mapID, uint32 tileX, uint32 tileY, dtNavMesh* navMesh, uint32 curTile, uint32 tileCount)
     {
@@ -760,14 +769,18 @@ namespace MMAP
         }
         else
         {
-            // TODO: Flag tiles permutations
-            for (auto& dataUpper : buildingsByGroup)
+            uint32 groupCount = buildingsByGroup.size();
+            for (uint32 i = 1; i <= factorial[i]; ++i)
             {
-                for (auto& dataLower : buildingsByGroup)
+                MeshData copyMeshData = meshData;
+                for (auto& dataUpper : buildingsByGroup)
                 {
-                    if (dataUpper.first == dataLower.first)
-                        continue;
+                    // groups start at 1
+                    if ((1 << (dataUpper.first - 1)) & i)
+                        for (TileBuilding const* building : dataUpper.second)
+                            AddBuildingToTile(building, copyMeshData);
                 }
+                PrepareAndBuildTile(copyMeshData, mapID, tileX, tileY, i, navMesh);
             }
         }
     }
@@ -795,7 +808,7 @@ namespace MMAP
         for (vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
         {
             // transform data
-            vector<Vector3> tempVertices;
+            vector<Vector3> tempVertices; 
             vector<MeshTriangle> tempTriangles;
             WmoLiquid* liquid = nullptr;
 
