@@ -656,13 +656,14 @@ namespace MMAP
         dtFreeNavMesh(navMesh);
     }
 
-    const std::array<uint32, 5> factorial =
+    const std::array<uint32, 6> factorial =
     {
         1,
         1,
         2,
         6,
-        24
+        24,
+        120
     };
 
     /**************************************************************************/
@@ -679,11 +680,11 @@ namespace MMAP
         m_terrainBuilder->loadVMap(mapID, tileY, tileX, meshData);
 
         // if there is no data, give up now
-        if (!meshData.solidVerts.size() && !meshData.liquidVerts.size())
+        if (!meshData.solidVerts.size() && !meshData.liquidVerts.size() && BuildingMap.find(mapID) == BuildingMap.end())
             return;
 
         meshData.solidType.resize(meshData.solidTris.size() / 3);
-        std::fill(meshData.solidType.begin(), meshData.solidType.end(), NAV_GROUND);
+        std::fill(meshData.solidType.begin(), meshData.solidType.end(), NAV_AREA_GROUND);
 
         m_terrainBuilder->loadOffMeshConnections(mapID, tileX, tileY, meshData, m_offMeshFilePath);
 
@@ -762,10 +763,10 @@ namespace MMAP
                 PrepareAndBuildTile(copyMeshData, mapID, tileX, tileY, tileId, navMesh);
             }
         }
-        else
+        else if (buildingsByGroup.size())
         {
             uint32 groupCount = buildingsByGroup.size();
-            for (uint32 i = 1; i <= factorial[i]; ++i)
+            for (uint32 i = 1; i <= factorial[groupCount]; ++i)
             {
                 MeshData copyMeshData = meshData;
                 std::set<uint32> entryExclusivity;
@@ -851,6 +852,10 @@ namespace MMAP
 
     void MapBuilder::PrepareAndBuildTile(MeshData& meshData, uint32 mapID, uint32 tileX, uint32 tileY, uint32 tileId, dtNavMesh* navMesh)
     {
+        // do not generate empty tile
+        if (!meshData.solidVerts.size() && !meshData.liquidVerts.size())
+            return;
+
         // remove unused vertices
         TerrainBuilder::cleanVertices(meshData.solidVerts, meshData.solidTris);
         TerrainBuilder::cleanVertices(meshData.liquidVerts, meshData.liquidTris);

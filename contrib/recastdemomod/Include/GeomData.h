@@ -8,6 +8,7 @@
 #include "SampleInterfaces.h"
 #include "ChunkyTriMesh.h"
 #include "..\..\..\..\contrib\mmap\src\TerrainBuilder.h"
+#include "Vmap/GameObjectModelVmaps.h"
 
 class MeshDetails
 {
@@ -102,6 +103,8 @@ private:
     unsigned int   m_MapId;
     unsigned int   m_TileX;
     unsigned int   m_TileY;
+
+    ModelList m_modelList;
 };
 
 typedef std::map<unsigned int, MeshObjects*> MeshObjectsMap;
