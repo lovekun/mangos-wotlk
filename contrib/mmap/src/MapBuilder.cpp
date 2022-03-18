@@ -690,7 +690,6 @@ namespace MMAP
         std::vector<TileBuilding const*> buildingsByDefault;
         std::map<uint32, std::vector<TileBuilding const*>> buildingsInTile;
         std::map<uint32, std::vector<TileBuilding const*>> buildingsByGroup;
-        std::map<uint32, uint32> entryToGroup;
         std::map<uint32, uint32> flagToGroup;
 
         auto itr = BuildingMap.find(mapID);
@@ -727,11 +726,8 @@ namespace MMAP
                     else
                     {
                         uint32 chosenGroup = 0;
-                        auto itrEntry = entryToGroup.find(data.goEntry);
                         auto itrFlags = flagToGroup.find(data.tileFlags);
-                        if (itrEntry != entryToGroup.end())
-                            chosenGroup = itrEntry->second;
-                        else if (data.tileFlags > 0 && itrFlags != flagToGroup.end())
+                        if (data.tileFlags > 0 && itrFlags != flagToGroup.end())
                             chosenGroup = itrFlags->second;
                         else
                         {
@@ -740,7 +736,6 @@ namespace MMAP
                         }
 
                         buildingsByGroup[chosenGroup].push_back(&data);
-                        entryToGroup[data.goEntry] = chosenGroup;
                         if (data.tileFlags)
                             flagToGroup[data.tileFlags] = chosenGroup;
                     }
@@ -773,8 +768,29 @@ namespace MMAP
             for (uint32 i = 1; i <= factorial[i]; ++i)
             {
                 MeshData copyMeshData = meshData;
+                std::set<uint32> entryExclusivity;
+                bool stop = false;
                 for (auto& dataUpper : buildingsByGroup)
                 {
+                    // first we need to eliminate cases which never occur and reduce state space
+                    // check if same GO isnt in this permutation twice
+                    if ((1 << (dataUpper.first - 1)) & i)
+                    {
+                        for (TileBuilding const* building : dataUpper.second)
+                        {
+                            if (entryExclusivity.find(building->goEntry) != entryExclusivity.end())
+                            {
+                                stop = true;
+                                break;;
+                            }
+
+                            entryExclusivity.insert(building->goEntry);
+                        }
+                    }
+
+                    if (stop) // do not generate this permutation
+                        continue;
+
                     // groups start at 1
                     if ((1 << (dataUpper.first - 1)) & i)
                         for (TileBuilding const* building : dataUpper.second)
