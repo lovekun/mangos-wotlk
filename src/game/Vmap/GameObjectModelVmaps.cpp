@@ -97,8 +97,8 @@ std::tuple<std::vector<TileBuilding const*>, std::map<uint32, std::vector<TileBu
                 else
                 {
                     uint32 chosenGroup = 0;
-                    auto itrFlags = flagToGroup.find(data.tileFlags);
-                    if (data.tileFlags > 0 && itrFlags != flagToGroup.end())
+                    auto itrFlags = flagToGroup.find(data.tileNumber);
+                    if (data.tileNumber > 0 && itrFlags != flagToGroup.end())
                         chosenGroup = itrFlags->second;
                     else
                     {
@@ -107,8 +107,8 @@ std::tuple<std::vector<TileBuilding const*>, std::map<uint32, std::vector<TileBu
                     }
 
                     buildingsByGroup[chosenGroup].push_back(&data);
-                    if (data.tileFlags)
-                        flagToGroup[data.tileFlags] = chosenGroup;
+                    if (data.tileNumber)
+                        flagToGroup[data.tileNumber] = chosenGroup;
                 }
             }
         }

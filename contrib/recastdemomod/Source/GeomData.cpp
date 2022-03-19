@@ -242,7 +242,7 @@ void MeshObjects::LoadVMap()
     std::map<uint32, std::vector<TileBuilding const*>> buildingsByGroup;
     std::map<uint32, uint32> flagToGroup;
 
-    std::tie(buildingsByDefault, buildingsInTile, buildingsByGroup, flagToGroup) = GetTileBuildingData(mapID, tileY, tileX, m_modelList);
+    std::tie(buildingsByDefault, buildingsInTile, buildingsByGroup, flagToGroup) = GetTileBuildingData(mapID, tileX, tileY, m_modelList);
 
     if (buildingsByDefault.size())
     {
