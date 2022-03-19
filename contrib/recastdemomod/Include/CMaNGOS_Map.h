@@ -116,8 +116,8 @@ enum ShowLevels
 
 struct SelectedTile
 {
-    SelectedTile(unsigned int x, unsigned int y, float const* bmin, float const* bmax) :
-        tx(x), ty(y)
+    SelectedTile(unsigned int x, unsigned int y, unsigned int Id, float const* bmin, float const* bmax) :
+        tx(x), ty(y), id(Id)
     {
         rcVcopy(bMin, bmin);
         rcVcopy(bMax, bmax);
@@ -125,6 +125,7 @@ struct SelectedTile
 
     unsigned int tx;
     unsigned int ty;
+    unsigned int id;
     float bMin[3];
     float bMax[3];
 };

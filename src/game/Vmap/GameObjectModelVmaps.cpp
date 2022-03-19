@@ -17,6 +17,10 @@
  */
 
 #include "Vmap/GameObjectModelVmaps.h"
+#include "Vmap/WorldModel.h"
+#include "MotionGenerators/MoveMapSharedDefines.h"
+#include <G3D/Quat.h>
+#include <G3D/Vector3.h>
 
 ModelList LoadGameObjectModelList(std::string fileName)
 {
@@ -47,4 +51,68 @@ ModelList LoadGameObjectModelList(std::string fileName)
     }
     fclose(model_list_file);
     return model_list;
+}
+
+static const float GRID_SIZE = 533.33333f;
+
+// warning - mmaps use swapped tileX and tileY than recastdemo
+std::tuple<std::vector<TileBuilding const*>, std::map<uint32, std::vector<TileBuilding const*>>, std::map<uint32, std::vector<TileBuilding const*>>, std::map<uint32, uint32>> GetTileBuildingData(uint32 mapId, uint32 tileX, uint32 tileY, ModelList& modelList)
+{
+    std::vector<TileBuilding const*> buildingsByDefault;
+    std::map<uint32, std::vector<TileBuilding const*>> buildingsInTile;
+    std::map<uint32, std::vector<TileBuilding const*>> buildingsByGroup;
+    std::map<uint32, uint32> flagToGroup;
+
+    auto itr = BuildingMap.find(mapId);
+    if (itr != BuildingMap.end()) // building GO
+    {
+        uint32 i = 0;
+        for (TileBuilding& data : itr->second)
+        {
+            G3D::Matrix3 iRotation = G3D::Matrix3::fromEulerAnglesZYX(data.ori, 0, 0);
+            G3D::Vector3 pos(data.x, data.y, data.z);
+            ModelList::const_iterator itr = modelList.find(data.displayId);
+            if (itr == modelList.end())
+                continue;
+            G3D::AABox mdl_box = itr->second.bound;
+            // transform bounding box:
+            mdl_box = G3D::AABox(mdl_box.low() * 1, mdl_box.high() * 1);
+            G3D::AABox rotated_bounds;
+            for (uint32 i = 0; i < 8; ++i)
+                rotated_bounds.merge(iRotation * mdl_box.corner(i));
+
+            G3D::AABox bounds = rotated_bounds + pos;
+
+            uint32 lowX = 32 - bounds.high().y / GRID_SIZE;
+            uint32 lowY = 32 - bounds.high().x / GRID_SIZE;
+            uint32 highX = 32 - bounds.low().y / GRID_SIZE;
+            uint32 highY = 32 - bounds.low().x / GRID_SIZE;
+
+            if (lowX <= tileX && lowY <= tileY && highX >= tileX && highY >= tileY)
+            {
+                if (data.byDefault)
+                    buildingsByDefault.push_back(&data);
+                else if (!data.tileFlags)
+                    buildingsInTile[data.tileNumber].push_back(&data);
+                else
+                {
+                    uint32 chosenGroup = 0;
+                    auto itrFlags = flagToGroup.find(data.tileFlags);
+                    if (data.tileFlags > 0 && itrFlags != flagToGroup.end())
+                        chosenGroup = itrFlags->second;
+                    else
+                    {
+                        chosenGroup = i;
+                        ++i;
+                    }
+
+                    buildingsByGroup[chosenGroup].push_back(&data);
+                    if (data.tileFlags)
+                        flagToGroup[data.tileFlags] = chosenGroup;
+                }
+            }
+        }
+    }
+
+    return { buildingsByDefault, buildingsInTile, buildingsByGroup, flagToGroup };
 }

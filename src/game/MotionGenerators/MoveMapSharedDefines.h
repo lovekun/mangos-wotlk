@@ -22,6 +22,8 @@
 #include "Platform/Define.h"
 #include <Detour/Include/DetourNavMesh.h>
 #include <map>
+#include <string>
+#include <vector>
 
 #define MMAP_MAGIC 0x4d4d4150   // 'MMAP'
 #define MMAP_VERSION 7
@@ -94,5 +96,16 @@ static TileBuildings BuildingMap =
     TileBuilding(std::string("Iceshard_Standing.m2.vmo"), 533.56048583984375, -2152.831298828125, 840.85699462890625, 0, 0, 0, 0, 0, 9227, false, true, 0x1, 202143),
     TileBuilding(std::string("Iceshard_Standing.m2.vmo"), 533.55987548828125, -2096.47607421875, 840.85699462890625, 1.570795774459838867, 0, 0, 0, 0, 9227, false, true, 0x1, 202144)}}
 };
+
+#ifdef MMAP_GENERATOR
+
+namespace MMAP
+{
+    struct MeshData;
+
+    extern void AddBuildingToMeshData(TileBuilding const* building, MeshData& meshData);
+}
+
+#endif
 
 #endif  // _MOVE_MAP_SHARED_DEFINES_H

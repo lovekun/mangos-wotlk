@@ -6,6 +6,7 @@
 #include "WorldModel.h"
 #include <G3D/Quat.h>
 #include "MotionGenerators/MoveMapSharedDefines.h"
+#include <array>
 
 #ifdef WIN32
 #   define snprintf _snprintf
@@ -116,14 +117,14 @@ MeshInfos::MeshInfos(MeshDetails const* sMesh, MeshDetails const* lMesh, float c
 }
 
 MeshObjects::MeshObjects(const std::string modelName, BuildContext* ctx) :
-    m_MapId(0), m_TileX(0), m_TileY(0), m_Ctx(ctx),
+    m_MapId(0), m_TileX(0), m_TileY(0), m_tileId(0), m_Ctx(ctx),
     m_MapInfos(NULL), m_VMapInfos(NULL), m_ModelInfos(nullptr), m_modelName(modelName), m_meshType(MESH_OBJECT_TYPE_OBJECT)
 {
     LoadObject();
 }
 
-MeshObjects::MeshObjects(unsigned int mapId, unsigned int tileX, unsigned int tileY, BuildContext* ctx) :
-    m_MapId(mapId), m_TileX(tileX), m_TileY(tileY), m_Ctx(ctx),
+MeshObjects::MeshObjects(unsigned int mapId, unsigned int tileX, unsigned int tileY, uint32 tileId, BuildContext* ctx) :
+    m_MapId(mapId), m_TileX(tileX), m_TileY(tileY), m_tileId(tileId), m_Ctx(ctx),
     m_MapInfos(NULL), m_VMapInfos(NULL), m_ModelInfos(nullptr), m_meshType(MESH_OBJECT_TYPE_TILE)
 {
     if (mapId < 0 || tileX < 0 || tileX > 64 || tileY < 0 || tileY > 64)
@@ -217,6 +218,16 @@ void MeshObjects::LoadMap()
     delete terrainBuilder;
 }
 
+const std::array<uint32, 6> factorial =
+{
+    1,
+    1,
+    2,
+    6,
+    24,
+    120
+};
+
 void MeshObjects::LoadVMap()
 {
     TerrainBuilder* terrainBuilder = new TerrainBuilder(false, m_Ctx->getDataDir());
@@ -231,106 +242,33 @@ void MeshObjects::LoadVMap()
     std::map<uint32, std::vector<TileBuilding const*>> buildingsByGroup;
     std::map<uint32, uint32> flagToGroup;
 
-    auto itr = BuildingMap.find(mapID);
-    if (itr != BuildingMap.end()) // building GO
-    {
-        uint32 i = 0;
-        for (TileBuilding& data : itr->second)
-        {
-            G3D::Matrix3 iRotation = G3D::Matrix3::fromEulerAnglesZYX(data.ori, 0, 0);
-            Vector3 pos(data.x, data.y, data.z);
-            ModelList::const_iterator itr = m_modelList.find(data.displayId);
-            if (itr == m_modelList.end())
-                continue;
-            AABox mdl_box = itr->second.bound;
-            // transform bounding box:
-            mdl_box = AABox(mdl_box.low() * 1, mdl_box.high() * 1);
-            AABox rotated_bounds;
-            for (uint32 i = 0; i < 8; ++i)
-                rotated_bounds.merge(iRotation * mdl_box.corner(i));
-
-            AABox bounds = rotated_bounds + pos;
-
-            uint32 lowX = 32 - bounds.high().y / GRID_SIZE;
-            uint32 lowY = 32 - bounds.high().x / GRID_SIZE;
-            uint32 highX = 32 - bounds.low().y / GRID_SIZE;
-            uint32 highY = 32 - bounds.low().x / GRID_SIZE;
-
-            if (lowX <= tileX && lowY <= tileY && highX >= tileX && highY >= tileY)
-            {
-                if (data.byDefault)
-                    buildingsByDefault.push_back(&data);
-                else if (!data.tileFlags)
-                    buildingsInTile[data.tileNumber].push_back(&data);
-                else
-                {
-                    uint32 chosenGroup = 0;
-                    auto itrFlags = flagToGroup.find(data.tileFlags);
-                    if (data.tileFlags > 0 && itrFlags != flagToGroup.end())
-                        chosenGroup = itrFlags->second;
-                    else
-                    {
-                        chosenGroup = i;
-                        ++i;
-                    }
-
-                    buildingsByGroup[chosenGroup].push_back(&data);
-                    if (data.tileFlags)
-                        flagToGroup[data.tileFlags] = chosenGroup;
-                }
-            }
-        }
-    }
+    std::tie(buildingsByDefault, buildingsInTile, buildingsByGroup, flagToGroup) = GetTileBuildingData(mapID, tileY, tileX, m_modelList);
 
     if (buildingsByDefault.size())
     {
         for (TileBuilding const* building : buildingsByDefault)
+            AddBuildingToMeshData(building, m_VMapMesh);
+    }
+
+    if (buildingsInTile.size()) // predefined tile ids
+    {
+        for (auto& data : buildingsInTile)
         {
-            WorldModel m;
-            if (!m.readFile("vmaps/" + building->modelName))
-            {
-                printf("* Unable to open file\n");
-                return;
-            }
-
-            // Load model data into navmesh
-            std::vector<GroupModel> groupModels;
-            m.getGroupModels(groupModels);
-
-            // all M2s need to have triangle indices reversed
-            // bool isM2 = modelName.find(".m2") != modelName.npos || modelName.find(".M2") != modelName.npos;
-            bool isM2 = false;
-
-            G3D::Vector3 pos(building->x, building->y, building->z);
-            G3D::Quat rot(0, 0, sin(building->ori / 2), cos(building->ori / 2));
-            G3D::Matrix3 matrix = rot.toRotationMatrix();
-            for (vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
-            {
-                // transform data
-                vector<Vector3> tempVertices;
-                vector<MeshTriangle> tempTriangles;
-                WmoLiquid* liquid = nullptr;
-
-                (*it).getMeshData(tempVertices, tempTriangles, liquid);
-
-                for (auto& vertex : tempVertices)
-                {
-                    vertex.x = -vertex.x;
-                    vertex.y = -vertex.y;
-                    vertex = (vertex * matrix) + pos;
-                }
-
-                int offset = m_VMapMesh.solidVerts.size() / 3;
-
-                G3D::Array<uint8> tempTypes;
-                tempTypes.resize(tempTriangles.size());
-                std::fill(tempTypes.begin(), tempTypes.end(), NAV_AREA_GROUND);
-
-                TerrainBuilder::copyVertices(tempVertices, m_VMapMesh.solidVerts);
-                TerrainBuilder::copyIndices(tempTriangles, m_VMapMesh.solidTris, offset, isM2);
-                m_VMapMesh.solidType.append(tempTypes);
-            }
-        }       
+            uint32 tileId = data.first;
+            for (TileBuilding const* building : data.second)
+                if (tileId == m_tileId)
+                    AddBuildingToMeshData(building, m_VMapMesh);
+        }
+    }
+    else if (buildingsByGroup.size())
+    {
+        for (auto& dataUpper : buildingsByGroup)
+        {
+            // groups start at 1
+            if ((1 << (dataUpper.first - 1)) & m_tileId)
+                for (TileBuilding const* building : dataUpper.second)
+                    AddBuildingToMeshData(building, m_VMapMesh);
+        }
     }
 
     // get the coord bounds of the model data
@@ -503,14 +441,14 @@ void GeomData::Init(const std::string modelName, BuildContext* ctx)
     m_modelName = modelName;
 }
 
-MeshObjects const* GeomData::LoadTile(unsigned int tx, unsigned int ty)
+MeshObjects const* GeomData::LoadTile(unsigned int tx, unsigned int ty, uint32 tileId)
 {
     unsigned int pxy = StaticMapTree::packTileID(tx, ty);
 
     if (tx == ty && tx == 64)
         m_NoMapFile = true;
 
-    MeshObjects* newObj = new MeshObjects(m_MapId, tx, ty, m_Ctx);
+    MeshObjects* newObj = new MeshObjects(m_MapId, tx, ty, tileId, m_Ctx);
 
     if (newObj->GetMap() || newObj->GetVMap())
     {

@@ -693,60 +693,11 @@ namespace MMAP
         std::map<uint32, std::vector<TileBuilding const*>> buildingsByGroup;
         std::map<uint32, uint32> flagToGroup;
 
-        auto itr = BuildingMap.find(mapID);
-        if (itr != BuildingMap.end()) // building GO
-        {
-            uint32 i = 0;
-            for (TileBuilding& data : itr->second)
-            {
-                G3D::Matrix3 iRotation = G3D::Matrix3::fromEulerAnglesZYX(data.ori, 0, 0);
-                Vector3 pos(data.x, data.y, data.z);
-                ModelList::const_iterator itr = m_modelList.find(data.displayId);
-                if (itr == m_modelList.end())
-                    continue;
-                AABox mdl_box = itr->second.bound;
-                // transform bounding box:
-                mdl_box = AABox(mdl_box.low() * 1, mdl_box.high() * 1);
-                AABox rotated_bounds;
-                for (uint32 i = 0; i < 8; ++i)
-                    rotated_bounds.merge(iRotation * mdl_box.corner(i));
-
-                AABox bounds = rotated_bounds + pos;
-
-                uint32 lowX = 32 - bounds.high().y / GRID_SIZE;
-                uint32 lowY = 32 - bounds.high().x / GRID_SIZE;
-                uint32 highX = 32 - bounds.low().y / GRID_SIZE;
-                uint32 highY = 32 - bounds.low().x / GRID_SIZE;
-
-                if (lowX <= tileX && lowY <= tileY && highX >= tileX && highY >= tileY)
-                {
-                    if (data.byDefault)
-                        buildingsByDefault.push_back(&data);
-                    else if (!data.tileFlags)
-                        buildingsInTile[data.tileNumber].push_back(&data);
-                    else
-                    {
-                        uint32 chosenGroup = 0;
-                        auto itrFlags = flagToGroup.find(data.tileFlags);
-                        if (data.tileFlags > 0 && itrFlags != flagToGroup.end())
-                            chosenGroup = itrFlags->second;
-                        else
-                        {
-                            chosenGroup = i;
-                            ++i;
-                        }
-
-                        buildingsByGroup[chosenGroup].push_back(&data);
-                        if (data.tileFlags)
-                            flagToGroup[data.tileFlags] = chosenGroup;
-                    }
-                }
-            }
-        }
+        std::tie(buildingsByDefault, buildingsInTile, buildingsByGroup, flagToGroup) = GetTileBuildingData(mapID, tileX, tileY, m_modelList);
 
         // some buildings are by default like icc platform
         for (TileBuilding const* building : buildingsByDefault)
-            AddBuildingToTile(building, meshData);
+            AddBuildingToMeshData(building, meshData);
 
         // build navmesh tile 0
         PrepareAndBuildTile(meshData, mapID, tileX, tileY, 0, navMesh);
@@ -758,7 +709,7 @@ namespace MMAP
                 MeshData copyMeshData = meshData;
                 uint32 tileId = data.first;
                 for (TileBuilding const* building : data.second)
-                    AddBuildingToTile(building, copyMeshData);
+                    AddBuildingToMeshData(building, copyMeshData);
 
                 PrepareAndBuildTile(copyMeshData, mapID, tileX, tileY, tileId, navMesh);
             }
@@ -795,58 +746,10 @@ namespace MMAP
                     // groups start at 1
                     if ((1 << (dataUpper.first - 1)) & i)
                         for (TileBuilding const* building : dataUpper.second)
-                            AddBuildingToTile(building, copyMeshData);
+                            AddBuildingToMeshData(building, copyMeshData);
                 }
                 PrepareAndBuildTile(copyMeshData, mapID, tileX, tileY, i, navMesh);
             }
-        }
-    }
-
-    void MapBuilder::AddBuildingToTile(TileBuilding const* building, MeshData& meshData)
-    {
-        WorldModel m;
-        if (!m.readFile("vmaps/" + building->modelName))
-        {
-            printf("* Unable to open file\n");
-            return;
-        }
-
-        // Load model data into navmesh
-        std::vector<GroupModel> groupModels;
-        m.getGroupModels(groupModels);
-
-        // all M2s need to have triangle indices reversed
-        // bool isM2 = modelName.find(".m2") != modelName.npos || modelName.find(".M2") != modelName.npos;
-        bool isM2 = false;
-
-        G3D::Vector3 pos(building->x, building->y, building->z);
-        G3D::Quat rot(0, 0, sin(building->ori / 2), cos(building->ori / 2));
-        G3D::Matrix3 matrix = rot.toRotationMatrix();
-        for (vector<GroupModel>::iterator it = groupModels.begin(); it != groupModels.end(); ++it)
-        {
-            // transform data
-            vector<Vector3> tempVertices; 
-            vector<MeshTriangle> tempTriangles;
-            WmoLiquid* liquid = nullptr;
-
-            (*it).getMeshData(tempVertices, tempTriangles, liquid);
-
-            for (auto& vertex : tempVertices)
-            {
-                vertex.x = -vertex.x;
-                vertex.y = -vertex.y;
-                vertex = (vertex * matrix) + pos;
-            }
-
-            int offset = meshData.solidVerts.size() / 3;
-
-            G3D::Array<uint8> tempTypes;
-            tempTypes.resize(tempTriangles.size());
-            std::fill(tempTypes.begin(), tempTypes.end(), NAV_AREA_GROUND);
-
-            TerrainBuilder::copyVertices(tempVertices, meshData.solidVerts);
-            TerrainBuilder::copyIndices(tempTriangles, meshData.solidTris, offset, isM2);
-            meshData.solidType.append(tempTypes);
         }
     }
 

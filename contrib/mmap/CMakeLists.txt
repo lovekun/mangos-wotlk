@@ -68,6 +68,7 @@ add_library(mmaplib STATIC
     ./src/TerrainBuilder.h
     ./src/TerrainBuilder.cpp
     ./src/VMapExtensions.cpp
+    ../../src/game/MotionGenerators/MoveMapSharedDefines.cpp
 )
 
 target_include_directories(mmaplib

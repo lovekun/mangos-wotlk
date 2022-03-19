@@ -15,10 +15,11 @@ bool MapInfos::LoadTile(unsigned int tx, unsigned int ty, bool loadGeom /*= true
     if (!m_Initilized)
         return false;
 
+    uint32 tileId = 0;
     MeshObjects const* newObj = NULL;
     if (loadGeom)
     {
-        newObj = m_GeomData.LoadTile(tx, ty);
+        newObj = m_GeomData.LoadTile(tx, ty, tileId);
         if (newObj)
         {
             rcVcopy(m_BMin, m_GeomData.BMin());
@@ -35,7 +36,7 @@ bool MapInfos::LoadTile(unsigned int tx, unsigned int ty, bool loadGeom /*= true
                 mMapTileFound = m_MMapData.LoadTile(newObj->GetVMap()->BMin(), newObj->GetVMap()->BMax());
         }
         else
-            mMapTileFound = m_MMapData.LoadTile(tx, ty);
+            mMapTileFound = m_MMapData.LoadTile(tx, ty, tileId);
 
         if (mMapTileFound && !newObj)
         {
@@ -116,7 +117,7 @@ void MapInfos::BuildNavMeshOfTile(unsigned int tx, unsigned int ty, rcConfig* cf
         m_MMapData.BuildMoveMapTile(tx, ty, mo, cfg, partitionType);
 }
 
-bool MapInfos::LoadNavMeshOfTile(unsigned int tx, unsigned int ty)
+bool MapInfos::LoadNavMeshOfTile(unsigned int tx, unsigned int ty, unsigned int id)
 {
     if (m_GeomData.NoMapFile())
     {
@@ -126,5 +127,5 @@ bool MapInfos::LoadNavMeshOfTile(unsigned int tx, unsigned int ty)
         return false;
     }
     else
-        return m_MMapData.LoadTile(tx, ty);
+        return m_MMapData.LoadTile(tx, ty, id);
 }

@@ -667,7 +667,7 @@ void CMaNGOS_Map::handleSettings()
             bText = "Load selected tile navmesh";
             if (imguiButton(bText.c_str()))
             {
-                if (m_MapInfos->LoadNavMeshOfTile(m_SelectedTile->tx, m_SelectedTile->ty))
+                if (m_MapInfos->LoadNavMeshOfTile(m_SelectedTile->tx, m_SelectedTile->ty, m_SelectedTile->id))
                     setTool(new NavMeshTesterTool);
             }
 
@@ -1491,7 +1491,7 @@ void CMaNGOS_Map::SelectTile(float const* p)
     }
     else
         m_MapInfos->GetNavMeshTileBounds(tx, ty, bmin, bmax);
-    m_SelectedTile = new SelectedTile(tx, ty, bmin, bmax);
+    m_SelectedTile = new SelectedTile(tx, ty, 0, bmin, bmax);
 }
 
 void CMaNGOS_Map::handleClick(const float* s, const float* p, bool shift, bool control)

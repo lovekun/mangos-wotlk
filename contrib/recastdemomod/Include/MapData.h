@@ -13,7 +13,7 @@ public:
     bool LoadModel(const std::string modelName, const std::string objId);
     void RemoveTile(unsigned int tx, unsigned int ty);
     void ClearNavMeshOfTile(unsigned int tx, unsigned int ty) { m_MMapData.RemoveTile(tx, ty); };
-    bool LoadNavMeshOfTile(unsigned int tx, unsigned int ty);
+    bool LoadNavMeshOfTile(unsigned int tx, unsigned int ty, unsigned int id);
     void BuildNavMeshOfTile(unsigned int tx, unsigned int ty, rcConfig* cfg, SamplePartitionType partitionType);
     void RemoveAllTiles();
 
