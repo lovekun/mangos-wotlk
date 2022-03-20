@@ -547,6 +547,7 @@ bool CMaNGOS_Map::ShowAlternativeLevel(int height, int width)
 
             if (tx >= 0 && ty >= 0)
             {
+                m_MapInfos->RemoveTile(tx, ty);
                 if (LoadTileData(tx, ty, tId))
                     m_showLevel = SHOW_LEVEL_NONE;
             }
