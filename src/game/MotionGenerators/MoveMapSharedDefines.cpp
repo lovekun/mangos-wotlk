@@ -27,10 +27,13 @@
 
 namespace MMAP
 {
-    void AddBuildingToMeshData(TileBuilding const* building, MMAP::MeshData& meshData)
+    void AddBuildingToMeshData(TileBuilding const* building, MMAP::MeshData& meshData, char const* workDir)
     {
         VMAP::WorldModel m;
-        if (!m.readFile("vmaps/" + building->modelName))
+        std:string fullName(workDir);
+        fullName += "/vmaps/";
+        fullName += building->modelName;
+        if (!m.readFile(fullName))
         {
             printf("* Unable to open file\n");
             return;

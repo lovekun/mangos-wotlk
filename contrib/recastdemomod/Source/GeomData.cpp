@@ -130,7 +130,10 @@ MeshObjects::MeshObjects(unsigned int mapId, unsigned int tileX, unsigned int ti
     if (mapId < 0 || tileX < 0 || tileX > 64 || tileY < 0 || tileY > 64)
         return;
 
-    m_modelList = LoadGameObjectModelList(std::string(".") + "/vmaps/" + VMAP::GAMEOBJECT_MODELS);
+    std::string fullName(m_Ctx->getDataDir());
+    fullName += "/vmaps/";
+    fullName += VMAP::GAMEOBJECT_MODELS;
+    m_modelList = LoadGameObjectModelList(fullName);
 
     LoadMap();
     LoadVMap();
@@ -247,7 +250,7 @@ void MeshObjects::LoadVMap()
     if (buildingsByDefault.size())
     {
         for (TileBuilding const* building : buildingsByDefault)
-            AddBuildingToMeshData(building, m_VMapMesh);
+            AddBuildingToMeshData(building, m_VMapMesh, m_Ctx->getDataDir());
     }
 
     if (buildingsInTile.size()) // predefined tile ids
@@ -257,7 +260,7 @@ void MeshObjects::LoadVMap()
             uint32 tileId = data.first;
             for (TileBuilding const* building : data.second)
                 if (tileId == m_tileId)
-                    AddBuildingToMeshData(building, m_VMapMesh);
+                    AddBuildingToMeshData(building, m_VMapMesh, m_Ctx->getDataDir());
         }
     }
     else if (buildingsByGroup.size())
@@ -267,7 +270,7 @@ void MeshObjects::LoadVMap()
             // groups start at 1
             if ((1 << (dataUpper.first - 1)) & m_tileId)
                 for (TileBuilding const* building : dataUpper.second)
-                    AddBuildingToMeshData(building, m_VMapMesh);
+                    AddBuildingToMeshData(building, m_VMapMesh, m_Ctx->getDataDir());
         }
     }
 

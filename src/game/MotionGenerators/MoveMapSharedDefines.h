@@ -103,7 +103,7 @@ namespace MMAP
 {
     struct MeshData;
 
-    extern void AddBuildingToMeshData(TileBuilding const* building, MeshData& meshData);
+    extern void AddBuildingToMeshData(TileBuilding const* building, MeshData& meshData, char const* workDir = ".");
 }
 
 #endif
