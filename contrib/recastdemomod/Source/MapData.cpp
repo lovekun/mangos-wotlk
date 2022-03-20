@@ -10,12 +10,11 @@ void MapInfos::Init(unsigned int mapId, BuildContext* ctx)
     m_Initilized = true;
 }
 
-bool MapInfos::LoadTile(unsigned int tx, unsigned int ty, bool loadGeom /*= true*/, bool loadMmap /*= true */)
+bool MapInfos::LoadTile(unsigned int tx, unsigned int ty, unsigned int tileId /*= 0*/, bool loadGeom /*= true*/, bool loadMmap /*= true */)
 {
     if (!m_Initilized)
         return false;
 
-    uint32 tileId = 0;
     MeshObjects const* newObj = NULL;
     if (loadGeom)
     {

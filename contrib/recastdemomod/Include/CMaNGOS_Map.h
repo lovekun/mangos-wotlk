@@ -110,6 +110,7 @@ enum ShowLevels
     SHOW_LEVEL_NONE,
     SHOW_LEVEL_MAP,
     SHOW_LEVEL_NEIGHBOR_TILES,
+    SHOW_LEVEL_ALTERNATIVE_TILES,
     SHOW_LEVEL_TILES,
     SHOW_LEVEL_TRANSPORT
 };
@@ -194,6 +195,8 @@ protected:
     std::set <uint32> m_TilesFound;
     std::set <uint32> m_MapsFound;
     std::set <uint32> m_NeighborTiles;
+    std::vector <std::string> m_AlternateTiles;
+    int m_currentAlternate;
     string m_TileButtonStr;
     string m_transportButtonStr;
     bool m_GeomChanged;
@@ -257,7 +260,8 @@ public:
     bool ShowNeighborTiles(int height, int width);
     bool ShowTilesLevel(int height, int width);
     bool ShowTransportLevel(int height, int width);
-    bool LoadTileData(unsigned int tx, unsigned int ty);
+    bool ShowAlternativeLevel(int height, int width);
+    bool LoadTileData(unsigned int tx, unsigned int ty, unsigned int tileId = 0);
     bool GeomChanged();
     inline void GetGeomBounds(float const* &bmin, float const* &bmax) { bmin = m_MapInfos->BMin(); bmax = m_MapInfos->BMax(); }
     void ScanFoldersForMaps();
