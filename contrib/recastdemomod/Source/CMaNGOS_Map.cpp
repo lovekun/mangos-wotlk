@@ -549,7 +549,10 @@ bool CMaNGOS_Map::ShowAlternativeLevel(int height, int width)
             {
                 m_MapInfos->RemoveTile(tx, ty);
                 if (LoadTileData(tx, ty, tId))
+                {
+                    m_currentAlternate = i;
                     m_showLevel = SHOW_LEVEL_NONE;
+                }
             }
 
 //             if (!m_MapInfos->IsEmpty())
@@ -633,7 +636,7 @@ void CMaNGOS_Map::handleExtraSettings()
     if (!m_AlternateTiles.empty())
     {
         imguiLabel("Alternate tiles:");
-        if (imguiButton("Select alternative version of this tile"))
+        if (imguiButton(m_AlternateTiles[m_currentAlternate].c_str()))
         {
             if (m_showLevel != SHOW_LEVEL_NONE)
             {
